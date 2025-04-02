@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Messages</title>
+        <link rel="stylesheet" href="../static/style.css">
+        <!--Bootstrap CSS-->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJKqJByhZMI3AhiU" crossorigin="anonymous">
+        <!--FontAwesome ICONS-->
+        <script src="https://kit.fontawesome.com/16fda319fc.js" crossorigin="anonymous"></script>
+        <style>
+            body {
+                background-color: black; /* Set body background color to black */
+                color: white; /* Set text color to white for better readability */
+            }
+            .type-message-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                border-top: 1px solid #ddd;
+                position: absolute;
+                bottom: 0;
+                width: 99%;
+                background-color: black;
+            }
+            .type-message-bar-center {
+                flex-grow: 1;
+                margin-right: 10px;
+            }
+            .type-message-bar-right {
+                flex-shrink: 0;
+            }
+            .main {
+                position: relative;
+                padding-bottom: 60px; /* Height of the message bar */
+            }
+            .chat-window {
+                overflow-y: auto;
+                height: calc(100vh - 160px); /* Adjust height based on other elements */
+                padding-bottom: 10px;
+            }
+            .sender-message, .receiver-message, .message-time {
+                color: white; /* Set message text and time color to white */
+            }
+            .sidebar {
+                background-color: black; /* Black background for sidebar */
+                padding: 10px;
+            }
+            .search-bar input {
+                border: 1px solid #6a0dad; /* Purple border for search input */
+                background-color: black;
+                color: white;
+            }
+            .btn {
+                background-color: #6a0dad; /* Purple background for buttons */
+                color: white;
+            }
+            .btn:hover {
+                background-color: #5a0c9a; /* Darker purple for button hover */
+            }
+            .contact-name {
+                color: #6a0dad; /* Purple color for contact names */
+            }
+            .chat-window-header {
+                background-color: black; /* Black background for header */
+                padding: 10px;
+            }
+            .chat-window-contact-name {
+                color: #6a0dad; /* Purple color for chat window contact name */
+            }
+            .sender-message {
+                background-color: #6a0dad; /* Purple background for sender messages */
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 5px;
+                display: inline-block;
+            }
+            .receiver-message {
+                background-color: #4b0082; /* Darker purple for receiver messages */
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 5px;
+                display: inline-block;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="grid">
+            <div class="app">
+                <div class="sidebar">
+                    <div class="search-chat">
+                        <div class="search-bar">
+                            <input type="text" placeholder="Enter username to chat:" class="input-required" id="input_field"><button type="submit" class="btn btn-lg" id="submit-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                    <!--Chats-->
+                    <div class="chats">
+                        {% for name in people %}
+                            <div class="chat">
+                                <a href="/message/to={{name}}" class="fill-div">
+                                    <div class="chat-right">
+                                        <div class="chat-right-top">
+                                            <span class="contact-name">{{name}}</span>
+                                        </div>
+                                    </div> 
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="main">
+                    <div class="chat-window-header">
+                        <div class="chat-window-header-left">
+                            <div class="contact-name-container">
+                                <span class="chat-window-contact-name">{{ to }}</span>
+                            </div>
+                        </div>
+                        <a href="/posts" button type="button" class="btn btn-outline-dark btn-lg">To Posts</a>
+                    </div>
+                    <div class="chat-window" id="chat-window">
+                        {% for message in data %}
+                            {% if message.by == uname %}
+                                <div class="sender">
+                                    <span class="sender-message">{{ message.message }}</span>
+                                    <span class="message-time">{{ message.time.strftime('%d-%m-%Y@%H:%M') }}</span>
+                                </div>
+                            {% endif %}
+                            {% if message.by == to %}
+                                <div class="receiver">
+                                    <span class="receiver-message">{{ message.message }}</span>
+                                    <span class="message-time">{{ message.time.strftime('%d-%m-%Y@%H:%M') }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="type-message-bar">
+                        <div class="type-message-bar-center">
+                            <input type="text" class="input-required" placeholder="Enter a message" id="message_input">
+                        </div>
+                        <div class="type-message-bar-right">
+                            <button type="button" class="btn" id="send_btn"><i class="fas fa-share"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+        <script>
+            document.getElementById("submit-btn").addEventListener("click", ()=>{
+                const input_value = document.getElementById("input_field").value;
+                window.location.href = `http://localhost:5000/message/to=${input_value}`;
+            });
+
+            socket = io();
+            socket.on('connect', function () {
+                socket.emit('join_room', {
+                    username: "{{uname}}",
+                    room: "{{to}}-{{uname}}"
+                });
+                document.getElementById('send_btn').addEventListener('click', () => {
+                    let message_input = document.getElementById('message_input');
+                    let message = message_input.value.trim();
+                    var currentdate = new Date();
+                    var datetime = ("0"+currentdate.getDate()).slice(-2)+"-"+("0"+(currentdate.getMonth()+1)).slice(-2)+"-"+currentdate.getFullYear()+"@"+currentdate.getHours()+":"+currentdate.getMinutes();
+                    if (message.length) {
+                        socket.emit('send_message', {
+                            username: "{{ uname }}",
+                            room: "{{ to }}-{{ uname }}",
+                            message: message,
+                            time: datetime,
+                        })
+                    }
+                    message_input.value = null;
+                    message_input.focus();
+                })
+            });
+
+            socket.on('receive_message', function (data) {
+                const newNode = document.createElement('div');
+                if (data['username'] == "{{ uname }}") {
+                    newNode.className = 'sender';
+                    newNode.innerHTML = `<span class="sender-message">${data['message']}</span><span class="message-time">${data['time']}</span>`;
+                } else if(data['username'] == '{{ to }}') {
+                    newNode.className = 'receiver';
+                    newNode.innerHTML = `<span class="receiver-message">${data['message']}</span><span class="message-time">${data['time']}</span>`;
+                }
+                document.getElementById('chat-window').appendChild(newNode);
+            })
+        </script>
+    </body>
+</html>
